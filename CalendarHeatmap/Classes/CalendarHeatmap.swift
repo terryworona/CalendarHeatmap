@@ -31,6 +31,8 @@ open class CalendarHeatmap: UIView {
         cv.showsVerticalScrollIndicator = false
         cv.layer.masksToBounds = false
         cv.backgroundColor = .clear
+        cv.layer.shouldRasterize = true  // Improves scroll performance with shadows
+        cv.layer.rasterizationScale = UIScreen.main.scale
         return cv
     }()
     
