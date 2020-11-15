@@ -11,6 +11,11 @@ import UIKit
 @objc public protocol CalendarHeatmapDelegate: class {
     func colorFor(dateComponents: DateComponents) -> UIColor
     @objc optional func didSelectedAt(dateComponents: DateComponents)
+    @objc optional func finishLoadCalendar()
+    @objc optional func shadowColor() -> CGColor
+    @objc optional func shadowOffset() -> CGSize
+    @objc optional func shadowOpacity() -> Float
+    @objc optional func shadowRadius() -> CGFloat
 }
 
 open class CalendarHeatmap: UIView {
@@ -146,6 +151,16 @@ extension CalendarHeatmap: UICollectionViewDelegate, UICollectionViewDataSource 
         cell.config = config
         if let date = calendarData.itemAt(indexPath: indexPath),
             let itemColor = delegate?.colorFor(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date)) {
+            
+            if let shadowColor = delegate?.shadowColor?(), let shadowOffset = delegate?.shadowOffset?(), let shadowOpacity = delegate?.shadowOpacity?(), let shadowRadius = self.delegate?.shadowRadius?() {
+                cell.clipsToBounds = false
+                cell.layer.shadowColor = shadowColor
+                cell.layer.shadowOpacity = shadowOpacity
+                cell.layer.shadowRadius = shadowRadius
+                cell.layer.shadowOffset = shadowOffset
+                self.layer.shadowPath = UIBezierPath(roundedRect: self.bounds, cornerRadius: self.layer.cornerRadius).cgPath
+            }
+            
             cell.itemColor = itemColor
         } else {
             cell.itemColor = .clear
