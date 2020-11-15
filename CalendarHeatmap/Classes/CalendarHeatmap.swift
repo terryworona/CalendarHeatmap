@@ -96,7 +96,7 @@ open class CalendarHeatmap: UIView {
             collectionView.topAnchor.constraint(equalTo: self.topAnchor),
             collectionView.heightAnchor.constraint(equalToConstant: config.itemSide * 7 + config.interitemSpacing * 6 + config.monthHeight),
             collectionView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: weekDayView.trailingAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
             monthHeaderView.topAnchor.constraint(equalTo: collectionView.topAnchor),
             monthHeaderView.leadingAnchor.constraint(equalTo: collectionView.leadingAnchor),
             monthHeaderView.heightAnchor.constraint(equalToConstant: config.monthHeight)
