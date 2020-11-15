@@ -8,7 +8,7 @@
 
 import UIKit
 
-@objc public protocol CalendarHeatmapDelegate: class {
+@objc public protocol CalendarHeatmapDelegate {
     func colorFor(dateComponents: DateComponents) -> UIColor
     @objc optional func didSelectedAt(dateComponents: DateComponents)
     @objc optional func finishLoadCalendar()
@@ -57,12 +57,10 @@ open class CalendarHeatmap: UIView {
     
     private let cellId = "CalendarHeatmapCellId"
     private let config: CalendarHeatmapConfig
-    private let startDate: Date
-    private let endDate: Date
+    private var startDate: Date
+    private var endDate: Date
     
-    private lazy var calendarData: CalendarHeatmapData = {
-        return CalendarHeatmapData(config: config, startDate: startDate.startOfMonth(), endDate: endDate)
-    }()
+    private var calendarData: CalendarHeatmapData?
     
     open weak var delegate: CalendarHeatmapDelegate?
     
@@ -72,21 +70,46 @@ open class CalendarHeatmap: UIView {
         self.endDate = endDate
         super.init(frame: .zero)
         render()
+        setup()
+    }
+    
+    public func reload() {
+        collectionView.reloadData()
+    }
+    
+    public func reload(newStartDate: Date?, newEndDate: Date?) {
+        guard newStartDate != nil || newEndDate != nil else {
+            reload()
+            return
+        }
+        startDate = newStartDate ?? startDate
+        endDate = newEndDate ?? endDate
+        setup()
+    }
+    
+    public func scrollTo(date: Date, at: UICollectionView.ScrollPosition, animated: Bool) {
+        let difference = Date.daysBetween(start: startDate, end: date)
+        collectionView.scrollToItem(at: IndexPath(item: difference - 1, section: 0), at: at, animated: animated)
+    }
+    
+    private func setup() {
+        backgroundColor = config.backgroundColor
         DispatchQueue.global(qos: .userInteractive).async {
             // calculate calendar date in background
-            self.calendarData.setupCalendar()
-            self.addHeaderLabel(headers: self.calendarData.headerData)
+            self.calendarData = CalendarHeatmapData(config: self.config,
+                                                    startDate: self.startDate,
+                                                    endDate: self.endDate)
+            self.monthHeaderView.build(headers: self.calendarData!.headerData)
             DispatchQueue.main.async { [weak self] in
                 // then reload
                 self?.collectionView.reloadData()
-                self?.scrollToEnd()
+                self?.delegate?.finishLoadCalendar?()
             }
         }
     }
     
     private func render() {
-        clipsToBounds = true
-        backgroundColor = config.backgroundColor
+        clipsToBounds = false
         
         addSubview(collectionView)
         addSubview(weekDayView)
@@ -114,26 +137,6 @@ open class CalendarHeatmap: UIView {
         bottomConstraint.isActive = true
     }
     
-    private func addHeaderLabel(headers: [(month: Int, width: CGFloat)]) {
-        DispatchQueue.main.async {
-            for header in headers {
-                let monthText = self.config.monthStrings[header.month - 1]
-                self.monthHeaderView.append(text: monthText, width: header.width)
-            }
-        }
-    }
-    
-    private func scrollToEnd() {
-        // scroll to end
-        DispatchQueue.main.async { [weak self] in
-            guard let strongSelf = self else { return }
-            let lastSection = strongSelf.calendarData.sectionCount - 1
-            guard let lastItemIndex = strongSelf.calendarData.itemCountIn(section: lastSection) else { return }
-            let indexPath = IndexPath(item: lastItemIndex - 1, section: lastSection)
-            strongSelf.collectionView.scrollToItem(at: indexPath, at: .right, animated: false)
-        }
-    }
-    
     public required init?(coder: NSCoder) {
         fatalError("no storyboard implementation, should not enter here")
     }
@@ -141,23 +144,19 @@ open class CalendarHeatmap: UIView {
 
 extension CalendarHeatmap: UICollectionViewDelegate, UICollectionViewDataSource {
     
-    public func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return calendarData.sectionCount
-    }
-    
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return calendarData.itemCountIn(section: section) ?? 0
+        return calendarData?.daysCount ?? 0
     }
     
     open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        if let date = self.calendarData.itemAt(indexPath: indexPath), let itemColor = delegate?.colorFor(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date)) {
+        if let date = calendarData?.itemAt(indexPath: indexPath), let itemColor = delegate?.colorFor(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date)) {
             if let calendarHeatmapCell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as? CalendarHeatmapCell {
                 calendarHeatmapCell.config = config
                 calendarHeatmapCell.shadowColor = delegate?.shadowColor?()
                 calendarHeatmapCell.shadowOpacity = delegate?.shadowOpacity?()
                 calendarHeatmapCell.shadowRadius = delegate?.shadowRadius?()
                 calendarHeatmapCell.shadowOffset = delegate?.shadowOffset?()
-                calendarHeatmapCell.itemColor = itemColor
+                calendarHeatmapCell.itemColor = itemColor                
                 return calendarHeatmapCell
             }
         }
@@ -167,9 +166,10 @@ extension CalendarHeatmap: UICollectionViewDelegate, UICollectionViewDataSource 
     }
     
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let date = self.calendarData.itemAt(indexPath: indexPath) else {
+        guard let date = calendarData?.itemAt(indexPath: indexPath) else {
             return
         }
         delegate?.didSelectedAt?(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date))
     }
+    
 }

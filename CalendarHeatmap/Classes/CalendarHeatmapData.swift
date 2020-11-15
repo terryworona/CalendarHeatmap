@@ -11,7 +11,7 @@ import UIKit
 struct CalendarHeatmapData {
     
     // cache for building calendar view
-    private var itemsInSection: [[Date?]] = []
+    private var days = [Date?]()
     
     // calculate calendar date.
     private let startDate: Date
@@ -22,8 +22,7 @@ struct CalendarHeatmapData {
     
     // calculate header width related.
     private(set) var headerData = [(month: Int, width: CGFloat)]()
-    private let itemSide: CGFloat
-    private let lineSpacing: CGFloat
+    private let config: CalendarHeatmapConfig
     // count column for each section, and count item in each column.
     // these two variables are used for calculate the width of each month header.
     private var columnCountInSection: Int = 0
@@ -33,13 +32,12 @@ struct CalendarHeatmapData {
     // when the reminder = 0, should move to next month section
     private var remindDaysInSection: Int = 0
     
-    var sectionCount: Int {
-        return itemsInSection.count
+    var daysCount: Int {
+        return days.count
     }
     
     init(config: CalendarHeatmapConfig, startDate: Date, endDate: Date) {
-        self.itemSide = config.itemSide
-        self.lineSpacing = config.lineSpacing
+        self.config = config
         
         // initial calculating variables.
         self.startDate = startDate
@@ -50,24 +48,24 @@ struct CalendarHeatmapData {
         
         // initial item count based on the weekday of the first date
         itemCountInColumn = Calendar.current.component(.weekday, from: startDate)
-    }
-    
-    func itemCountIn(section: Int) -> Int? {
-        guard section < sectionCount else { return nil }
-        return itemsInSection[section].count
+        
+        setupCalendar()
     }
     
     func itemAt(indexPath: IndexPath) -> Date? {
-        return itemsInSection[indexPath.section][indexPath.item]
+        return days[indexPath.item]
     }
     
-    mutating func setupCalendar() {
+    private mutating func setupCalendar() {
         // cache for date of current month.
-        var currentMonthDates = fillLeadingEmptyDaysBefore(date: startDate)
+        let leadingEmptyDays = buildLeadingEmptyDays(date: startDate)
+        days.append(contentsOf: leadingEmptyDays)
+        var currentMonthCount = leadingEmptyDays.count
         // loop all days.
         for _ in 0...totalDays {
             // append current date to month section
-            currentMonthDates.append(Date(currentYear, currentMonth, currentDay))
+            days.append(Date.dateOf(currentYear, currentMonth, currentDay))
+            currentMonthCount += 1
             remindDaysInSection -= 1
             addOneItemCount(itemCount: &itemCountInColumn, columnCount: &columnCountInSection)
             if let thisMonth = moveToNextDay(year: &currentYear, month: &currentMonth, day: &currentDay) {
@@ -78,21 +76,18 @@ struct CalendarHeatmapData {
                 // check if current row is filled up
                 // the new month will start only when the column is filled up by the dates belong to the same month.
                 // and then, at the end of each month section, it is possible to fill up days from the next month.
-                remindDaysInSection = roundUp(days: currentMonthDates.count)
+                remindDaysInSection = roundUp(days: currentMonthCount)
             }
             
             if remindDaysInSection == 0 {
                 // the current month section is filled up, should start a new month section.
                 // append the last month section and init a new month section
-                itemsInSection.append(currentMonthDates)
-                currentMonthDates = []
+                currentMonthCount = 0
             }
         }
-        guard currentMonthDates.count > 0 else { return }
-        // append the last month section.
-        itemsInSection.append(currentMonthDates)
+        guard currentMonthCount > 0 else { return }
         // use max width for the last momth header
-        headerData.append((currentMonth, (itemSide + lineSpacing) * 5))
+        headerData.append((currentMonth, (config.itemSide + config.lineSpacing) * 5))
     }
     
     // MARK: setup header related functions
@@ -101,7 +96,7 @@ struct CalendarHeatmapData {
         // if the current item is the first on in column, it belongs to the next month
         // otherwirs, it belongs to this month
         let sectionColumnCount = itemCount == 1 ? (columnCount - 1) : columnCount
-        return CGFloat(sectionColumnCount) * (itemSide + lineSpacing)
+        return CGFloat(sectionColumnCount) * (config.itemSide + config.lineSpacing)
     }
     
     private func addOneItemCount(itemCount: inout Int, columnCount: inout Int) {
@@ -115,10 +110,15 @@ struct CalendarHeatmapData {
     
     // MARK: month related functions
     // do not display collection cell before the start date
-    private mutating func fillLeadingEmptyDaysBefore(date: Date) -> [Date?] {
+    private mutating func buildLeadingEmptyDays(date: Date) -> [Date?] {
         // fill the leading empty day with nil date.
         // in calendar, if the item date is nil, fill the item with clear background color
-        let weekDay = Calendar.current.component(.weekday, from: date)
+        
+        var weekDay = Calendar.current.component(.weekday, from: date) - (config.weekDayStandard == .International ? 1 : 0)
+        if weekDay == 0 {
+            // set sunday as 7 in internation standard
+            weekDay = 7
+        }
         // add count of the items in column
         itemCountInColumn = weekDay
         columnCountInSection += 1

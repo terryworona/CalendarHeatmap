@@ -1,5 +1,5 @@
 //
-//  DateExtensions.swift
+//  Extensions.swift
 //  CalenderHeatmapDemo
 //
 //  Created by Dongjie Zhang on 2/27/20.
@@ -7,16 +7,9 @@
 //
 
 import Foundation
+import UIKit
 
 extension Date {
-    
-    init(_ year:Int, _ month: Int, _ day: Int) {
-        var dateComponents = DateComponents()
-        dateComponents.year = year
-        dateComponents.month = month
-        dateComponents.day = day
-        self.init(timeInterval:0, since: Calendar.current.date(from: dateComponents)!)
-    }
     
     static func dateOf(_ year:Int, _ month: Int, _ day: Int) -> Date? {
         var dateComponents = DateComponents()
@@ -30,10 +23,6 @@ extension Date {
         return Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0
     }
     
-    func startOfMonth() -> Date {
-        return Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: Calendar.current.startOfDay(for: self)))!
-    }
-    
     func daysInMonth() -> Int {
         let calendar = Calendar.current
         let dateComponents = DateComponents(year: calendar.component(.year, from: self), month: calendar.component(.month, from: self))
@@ -41,7 +30,6 @@ extension Date {
         return calendar.range(of: .day, in: .month, for: date)!.count
     }
 }
-
 
 // https://gist.github.com/yasirmturk/0b47d18a30722902a9a4aaad05d1794a
 extension UIStackView {
