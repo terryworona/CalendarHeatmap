@@ -1,4 +1,7 @@
 # Calendar Heatmap
+**Note**: this is a fork of [CalendarHeatmap](https://github.com/Zacharysp/CalendarHeatmap). 
+
+The collectionView's *leading anchor* is now the superview's *leading anchor* (flush with left side). Consumers should set the (private) collectionView content offset to the `weekDayWidth` to compensate. 
 
 ![CalendarHeatmap Title](https://raw.githubusercontent.com/Zacharysp/CalendarHeatmap/master/Resources/CalendarHeatmap.png)
 
@@ -22,11 +25,14 @@ it, simply add the following line to your Podfile:
 pod 'CalendarHeatmap'
 ```
 
-CalendarHeatmap is also availabel through Carthage, by adding it to your Cartfile:
+CalendarHeatmap is also availabele through Carthage, by adding it to your Cartfile:
 
 ```ruby
 github "Zacharysp/CalendarHeatmap"
 ```
+
+And finally CalendarHeatmap can also be installed using the Swift Package Manager:
+
 
 ## Usage
 
@@ -42,9 +48,7 @@ view.addSubview(calendarHeatmap)
 // provide a range of date.
 let formatter = DateFormatter()
 formatter.dateFormat = "yyyy-MM-dd"
-// calendar will display the whole month of the start date.
 let startDate = formatter.date(from: "2019-10-18")
-// the end date is the last day in the calendar
 let endDate = formatter.date(from: "2020-02-14")
 // default endDate is now.
 let calendarHeatmap = CalendarHeatmap(startDate: startDate, endDate: endDate)
@@ -54,6 +58,14 @@ let calendarHeatmap = CalendarHeatmap(startDate: startDate, endDate: endDate)
 // you could custom the heatmap by using CalendarHeatmapConfig.
 let config = CalendarHeatmapConfig()
 let calendarHeatmap = CalendarHeatmap(config: config, startDate: Date())
+```
+
+```swift
+// reload the heatmap
+let calendarHeatmap = CalendarHeatmap(startDate: ...)
+calendarHeatmap.reload()
+// reload with new range of date.
+calendarHeatmap.reload(newStartDate: ..., newEndDate: ...)
 ```
 
 `CalendarHeatmapConfig` details.
@@ -70,14 +82,28 @@ let calendarHeatmap = CalendarHeatmap(config: config, startDate: Date())
 | weekDayStrings    | [String] | `DateFormatter().shortWeekdaySymbols.map{ \$0.capitalized }` |
 | weekDayFont       |  UIFont  | `UIFont.systemFont(ofSize: 12, weight: .medium)`             |
 | weekDayWidth      | CGFloat  | 30                                                           |
+| weekDayStandard   |   Enum   | `USandCanada`                                                |
 | monthColor        | UIColor  | `UIColor.black`                                              |
 | monthStrings      | [String] | `DateFormatter().monthSymbols`                               |
 | monthFont         |  UIFont  | `UIFont.systemFont(ofSize: 12, weight: .medium)`             |
 | monthHeight       | CGFloat  | 20                                                           |
 
+Starts Monday or Sunday.
+
+```swift
+var config = CalendarHeatmapConfig()
+config.weekDayStandard = .USandCanada // starts Sunday. (default)
+config.weekDayStandard = .International // starts Monday
+```
+
+Scroll the calendar programmatically
+```swift
+calendarHeatMap.scrollTo(date: Date(...), at: .right, animated: false)
+```
+
 Make your `ViewController` adopts `CalendarHeatmapDelegate`
 
-```swift 
+```swift
 // color for date
 func colorFor(dateComponents: DateComponents) -> UIColor {
     guard let year = dateComponents.year,
@@ -88,11 +114,16 @@ func colorFor(dateComponents: DateComponents) -> UIColor {
     return yourColor
 }
 
-// selection at date
+// (optional) selection at date
 func didSelectedAt(dateComponents: DateComponents) {
     guard let year = dateComponents.year,
     let month = dateComponents.month,
     let day = dateComponents.day else { return }
+    // do something here
+}
+
+// (optional) notify finish loading the calendar
+func finishLoadCalendar() {
     // do something here
 }
 ```
