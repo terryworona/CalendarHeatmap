@@ -12,7 +12,7 @@ import UIKit
     func colorFor(dateComponents: DateComponents) -> UIColor
     @objc optional func didSelectedAt(dateComponents: DateComponents)
     @objc optional func finishLoadCalendar()
-    @objc optional func shadowColor() -> CGColor
+    @objc optional func shadowColor() -> UIColor
     @objc optional func shadowOffset() -> CGSize
     @objc optional func shadowOpacity() -> Float
     @objc optional func shadowRadius() -> CGFloat
@@ -26,6 +26,7 @@ open class CalendarHeatmap: UIView {
         cv.delegate = self
         cv.dataSource = self
         cv.register(CalendarHeatmapCell.self, forCellWithReuseIdentifier: cellId)
+        cv.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "emptyCell")
         cv.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: config.contentRightInset)
         cv.showsHorizontalScrollIndicator = false
         cv.showsVerticalScrollIndicator = false
@@ -149,29 +150,26 @@ extension CalendarHeatmap: UICollectionViewDelegate, UICollectionViewDataSource 
     }
     
     open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as! CalendarHeatmapCell
-        cell.config = config
-        if let date = calendarData.itemAt(indexPath: indexPath),
-            let itemColor = delegate?.colorFor(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date)) {
-            
-            if let shadowColor = delegate?.shadowColor?(), let shadowOffset = delegate?.shadowOffset?(), let shadowOpacity = delegate?.shadowOpacity?(), let shadowRadius = self.delegate?.shadowRadius?() {
-                cell.clipsToBounds = false
-                cell.layer.shadowColor = shadowColor
-                cell.layer.shadowOpacity = shadowOpacity
-                cell.layer.shadowRadius = shadowRadius
-                cell.layer.shadowOffset = shadowOffset
-                self.layer.shadowPath = UIBezierPath(roundedRect: self.bounds, cornerRadius: self.layer.cornerRadius).cgPath
+        if let date = self.calendarData.itemAt(indexPath: indexPath), let itemColor = delegate?.colorFor(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date)) {
+            if let calendarHeatmapCell = collectionView.dequeueReusableCell(withReuseIdentifier: cellId, for: indexPath) as? CalendarHeatmapCell {
+                calendarHeatmapCell.config = config
+                calendarHeatmapCell.shadowColor = delegate?.shadowColor?()
+                calendarHeatmapCell.shadowOpacity = delegate?.shadowOpacity?()
+                calendarHeatmapCell.shadowRadius = delegate?.shadowRadius?()
+                calendarHeatmapCell.shadowOffset = delegate?.shadowOffset?()
+                calendarHeatmapCell.itemColor = itemColor
+                return calendarHeatmapCell
             }
-            
-            cell.itemColor = itemColor
-        } else {
-            cell.itemColor = .clear
         }
-        return cell
+        let emptyCell = collectionView.dequeueReusableCell(withReuseIdentifier: "emptyCell", for: indexPath)
+        emptyCell.backgroundColor = UIColor.clear
+        return emptyCell
     }
     
     public func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard let date = calendarData.itemAt(indexPath: indexPath) else { return }
+        guard let date = self.calendarData.itemAt(indexPath: indexPath) else {
+            return
+        }
         delegate?.didSelectedAt?(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date))
     }
 }
