@@ -10,7 +10,7 @@ import UIKit
 
 @objc public protocol CalendarHeatmapDelegate {
     func colorFor(dateComponents: DateComponents) -> UIColor
-    @objc optional func didSelectedAt(dateComponents: DateComponents, cell: UICollectionViewCell)
+    @objc optional func didSelectedAt(dateComponents: DateComponents, indexPath: IndexPath)
     @objc optional func finishLoadCalendar()
     @objc optional func shadowColor() -> UIColor
     @objc optional func shadowOffset() -> CGSize
@@ -21,7 +21,7 @@ import UIKit
 open class CalendarHeatmap: UIView {
     
     // MARK: ui components
-    private lazy var collectionView: UICollectionView = {
+    lazy var collectionView: UICollectionView = {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: flowLayout)
         cv.delegate = self
         cv.dataSource = self
@@ -170,11 +170,7 @@ extension CalendarHeatmap: UICollectionViewDelegate, UICollectionViewDataSource 
             return
         }
         
-        guard let cell = collectionView.cellForItem(at: indexPath) else {
-            return
-        }
-        
-        delegate?.didSelectedAt?(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date), cell: cell)
+        delegate?.didSelectedAt?(dateComponents: Calendar.current.dateComponents([.year, .month, .day], from: date), indexPath: indexPath)
     }
     
 }
