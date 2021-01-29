@@ -21,7 +21,7 @@ import UIKit
 open class CalendarHeatmap: UIView {
     
     // MARK: ui components
-    lazy var collectionView: UICollectionView = {
+    private lazy var collectionView: UICollectionView = {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: flowLayout)
         cv.delegate = self
         cv.dataSource = self
